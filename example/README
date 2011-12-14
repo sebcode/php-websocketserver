@@ -1,0 +1,10 @@
+WebSocket echo server example
+
+Start the server either with xinetd using the ./startxinetdserver.sh
+script, or use netcat like:
+
+nc -l -p 9988 -c ./echoserver.php
+
+Open index.html in your web browser, enter the websocket-URL
+ws://hostname:port/ and click Connect.
+
