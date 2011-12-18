@@ -10,6 +10,7 @@ require_once('../WebSocketServer.php');
 assertFrame(array(
 	'isFin' => true,
 	'opcode' => WebSocketServer::OP_TEXT,
+	'isControl' => false,
 	'isMasked' => false,
 	'paylen' => 5,
 	'data' => 'Hello'
@@ -20,6 +21,7 @@ assertFrame(array(
 assertFrame(array(
 	'isFin' => true,
 	'opcode' => WebSocketServer::OP_TEXT,
+	'isControl' => false,
 	'isMasked' => true,
 	'paylen' => 5,
 	'data' => 'Hello'
@@ -30,6 +32,7 @@ assertFrame(array(
 assertFrame(array(
 	'isFin' => false,
 	'opcode' => WebSocketServer::OP_TEXT,
+	'isControl' => false,
 	'isMasked' => false,
 	'paylen' => 3,
 	'data' => 'Hel'
@@ -38,6 +41,7 @@ assertFrame(array(
 assertFrame(array(
 	'isFin' => true,
 	'opcode' => WebSocketServer::OP_CONT,
+	'isControl' => false,
 	'isMasked' => false,
 	'paylen' => 2,
 	'data' => 'lo'
@@ -48,6 +52,7 @@ assertFrame(array(
 assertFrame(array(
 	'isFin' => true,
 	'opcode' => WebSocketServer::OP_PING,
+	'isControl' => true,
 	'isMasked' => false,
 	'paylen' => 5,
 	'data' => 'Hello'
@@ -56,6 +61,7 @@ assertFrame(array(
 assertFrame(array(
 	'isFin' => true,
 	'opcode' => WebSocketServer::OP_PONG,
+	'isControl' => true,
 	'isMasked' => true,
 	'paylen' => 5,
 	'data' => 'Hello'

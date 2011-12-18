@@ -1,6 +1,6 @@
 <?php
 
-class WebSocketServer
+CLass WebSocketServer
 {
 	protected $rsock;
 	protected $wsock;
@@ -9,6 +9,7 @@ class WebSocketServer
 
 	protected $bufType = false;
 	protected $buf = '';
+	protected $close = false;
 
 	const MAX_PAYLOAD_LEN = 1048576;
 	const MAX_BUFFER_SIZE = 1048576;
@@ -75,7 +76,12 @@ class WebSocketServer
 
 			/* unfragmented message */
 			if ($f['isFin'] && $f['opcode'] != 0) {
-				$this->gotData($f['opcode'], $f['data']);
+				/* unfragmented messages may represent a control frame */
+				if ($f['isControl']) {
+					$this->handleControlFrame($f['opcode'], $f['data']);
+				} else {
+					$this->gotData($f['opcode'], $f['data']);
+				}
 			}
 			/* start fragmented message */
 			else if (!$f['isFin'] && $f['opcode'] != 0) {
@@ -98,6 +104,10 @@ class WebSocketServer
 				$this->bufType = false;
 				$this->buf = '';
 			}
+
+			if ($this->close) {
+				return;
+			}
 		}
 	}
 
@@ -107,6 +117,35 @@ class WebSocketServer
 			$this->gotText($data);
 		} else if ($type == self::OP_BIN) {
 			$this->gotBin($data);
+		}
+	}
+
+	protected function handleControlFrame($type, $data)
+	{
+		$len = strlen($data);
+
+		if ($type == self::OP_CLOSE) {
+			/* If there is a body, the first two bytes of the body MUST be a
+			 * 2-byte unsigned integer */
+			if ($len !== 0 && $len === 1) {
+				throw new Exception('invalid_frame');
+			}
+			
+			$statusCode = false;
+			$reason = false;
+
+			if ($len >= 2) {
+				$unpacked = unpack('n', substr($data, 0, 2));
+				$statusCode = $unpacked[1];
+				$reason = substr($data, 3);
+			}
+
+			$this->onClose($statusCode, $reason);
+
+			/* Send close frame.
+			 * 0x88: 10001000 fin, opcode close */
+			$this->write(chr(0x88) . chr(0));
+			$this->close = true;
 		}
 	}
 
@@ -120,14 +159,22 @@ class WebSocketServer
 	public function readFrame()
 	{
 		/* read first 2 bytes */
-
 		$data = $this->read(2);
 		$b1 = ord($data[0]);
 		$b2 = ord($data[1]);
 
+		/* Bit 0 of Byte 1: Indicates that this is the final fragment in a
+		 * message.  The first fragment MAY also be the final fragment.*/
 		$isFin = ($b1 & (1 << 7)) != 0;
+		/* Bits 4-7 of Byte 1: Defines the interpretation of the payload data. */
 		$opcode = $b1 & 0x0f;
+		/* Control frames are identified by opcodes where the most significant
+		 * bit of the opcode is 1 */
+		$isControl = ($b1 & (1 << 3)) != 0;
+		/* Bit 0 of Byte 2: If set to 1, a masking key is present in
+		 * masking-key, and this is used to unmask the payload data. */
 		$isMasked = ($b2 & (1 << 7)) != 0;
+		/* Bits 1-7 of Byte 2: The length of the payload data. */
 		$paylen = $b2 & 0x7f;
 
 		/* read extended payload length, if applicable */
@@ -174,6 +221,7 @@ class WebSocketServer
 
 		$this->lastFrame['isFin'] = $isFin;
 		$this->lastFrame['opcode'] = $opcode;
+		$this->lastFrame['isControl'] = $isControl;
 		$this->lastFrame['isMasked'] = $isMasked;
 		$this->lastFrame['paylen'] = $paylen;
 		$this->lastFrame['data'] = $data;
@@ -255,6 +303,11 @@ class WebSocketServer
 	}
 
 	protected function gotBin($data)
+	{
+		/* to be implemented by child class */
+	}
+
+	protected function onClose($statusCode, $reason)
 	{
 		/* to be implemented by child class */
 	}

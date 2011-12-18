@@ -11,6 +11,11 @@ class EchoServer extends WebSocketServer
 		$this->sendText($text);
 	}
 
+	protected function onClose($code, $reason)
+	{
+		error_log('Client closed connection (Code: ' . $code . ', reason: '. $reason .')');
+	}
+
 }
 
 $s = new EchoServer(STDIN, STDOUT);
