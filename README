@@ -5,7 +5,7 @@ Protocol RFC 6455 (http://tools.ietf.org/html/rfc6455).
 
 This server doesn't handle the TCP socket stuff, it just reads and
 writes from STDIN/STDOUT, so you need to use a super-server like
-xinetd or netcat.
+xinetd, tcpserver or netcat.
 
 -- 
 Sebastian Volland
